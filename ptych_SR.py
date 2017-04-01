@@ -72,31 +72,31 @@ def schedule(epoch):
     else:
         return lr/8
 
-def _residual_block(block_function, nb_filter, kernel_size, repetitions):
+def _residual_block(nb_filter, kernel_size = 3, repetitions=1):
     def f(input):
         res = input
         for i in range(repetitions):
-            res = _basic_conv_block(nb_filter=nb_filter,kernel_size=kernel_size)(res)
+            res = _conv_block(nb_filter=nb_filter,kernel_size=kernel_size)(res)
 
-        res = _conv_relu(nb_filter=nb_filter,kernel_size=kernel_size)(res)
+        res = _conv_bn(nb_filter=nb_filter,kernel_size=kernel_size)(res)
 
         res = merge.Add([res, input])
         return res
 
     return f
 
-def _basic_conv_block(nb_filter, kernel_size = 3, subsample=(1, 1)):
+def _conv_block(nb_filter, kernel_size = 3, subsample=(1, 1)):
     def f(input):
         conv = Convolution2D(nb_filter=nb_filter, (kernel_size,kernel_size), subsample=subsample,
-                             init="he_normal", border_mode="same")(input)
+                             kernel_initializer="he_normal", padding="same")(input)
         norm = BatchNormalization(mode=0, axis=CHANNEL_AXIS)(conv)
         return Activation("relu")(norm)
 
     return f
 
-def _basic_deconv_block(nb_filter, kernel_size = 3, subsample=(2, 2)):
+def _deconv_block(nb_filter, kernel_size = 3, strides=(2, 2)):
     def f(input):
-        conv = Conv2DTranspose(nb_filter=nb_filter, (kernel_size,kernel_size), subsample=subsample,
+        conv = Conv2DTranspose(nb_filter=nb_filter, (kernel_size,kernel_size), strides=subsample,
                              init="he_normal", border_mode="same")(input)
         norm = BatchNormalization(mode=0, axis=CHANNEL_AXIS)(conv)
         return Activation("relu")(norm)
@@ -109,10 +109,36 @@ def _conv_relu(nb_filter, kernel_size = 3, subsample=(1, 1)):
     def f(input):
         conv = Convolution2D(nb_filter=nb_filter, (kernel_size,kernel_size), subsample=subsample,
                              init="he_normal", border_mode="same")(input)
+        active = Activation("relu")(conv)
+        return active
+
+    return f
+
+def _conv_bn(nb_filter, kernel_size = 3, subsample=(1, 1)):
+    def f(input):
+        conv = Convolution2D(nb_filter=nb_filter, (kernel_size,kernel_size), subsample=subsample,
+                             init="he_normal", border_mode="same")(input)
         norm = BatchNormalization(mode=0, axis=CHANNEL_AXIS)(conv)
         return norm
 
     return f
+
+def create_model(input_shape, output_shape):
+    input = Input(shape=input_shape)
+
+    temp = _conv_block(nb_filter = 64, kernel_size = 9)(input)
+    temp = _residual_block(nb_filter = 64, kernel_size = 3, repetitions=1)(temp)
+    temp = _residual_block(nb_filter = 64, kernel_size = 3, repetitions=1)(temp)
+    temp = _residual_block(nb_filter = 64, kernel_size = 3, repetitions=1)(temp)
+    temp = _residual_block(nb_filter = 64, kernel_size = 3, repetitions=1)(temp)
+
+    temp = _deconv_block(nb_filter = 64, kernel_size = 3)(temp)
+    temp = _residual_block(nb_filter = 64, kernel_size = 3)(temp)
+
+    temp = _conv_block(nb_filter = 3, kernel_size = 9)(temp)
+
+    model = Model(input= input, output = temp)
+
 
 
 def train_model(path_train,home,model_name,mParam):
@@ -120,39 +146,6 @@ def train_model(path_train,home,model_name,mParam):
     input_shape = (49,None,None)
     output_shape = (1,None,None)
     print input_shape,output_shape
-
-    border_mode = mParam['border_mode']
-    norm_axis = 1
-
-    input = Input(shape=input_shape)
-
-    kernels = [5,3,3]
-
-    temp = Convolution2D(128, kernels[0], kernels[0], border_mode=border_mode, init = 'he_normal')(input)
-    # temp = BatchNormalization(mode=0, axis=norm_axis)(temp)
-    temp = Activation('relu')(temp)
-
-    # temp = Convolution2D(64, 5, 5, border_mode=border_mode, init = 'he_normal')(temp)
-    # # temp = BatchNormalization(mode=0, axis=norm_axis)(temp)
-    # temp = Activation('relu')(temp)
-
-    # temp = Convolution2D(128, 5, 5, border_mode=border_mode, init = 'he_normal')(temp)
-    # # temp = Dropout(0.5)(temp)
-    # # temp = BatchNormalization(mode=0, axis=norm_axis)(temp)
-    # temp = Activation('relu')(temp)
-    
-    temp = Convolution2D(128, kernels[1], kernels[1], border_mode=border_mode, init = 'he_normal')(temp)
-    # temp = BatchNormalization(mode=0, axis=norm_axis)(temp)
-    temp = Activation('relu')(temp)
-    
-
-    temp = Convolution2D(1, kernels[2], kernels[2], border_mode=border_mode, init = 'he_normal')(temp)
-    # temp = BatchNormalization(mode=1, axis=norm_axis)(temp)
-    # temp = Activation('relu')(temp)
-
-    model = Model(input=input, output=temp)
-
-    crop_size = (sum(kernels) - len(kernels))//2
 
     lrate = mParam['lrate']
     epochs = mParam['epochs']
