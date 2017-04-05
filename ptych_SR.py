@@ -133,7 +133,7 @@ def create_model(input_shape, output_shape):
     temp = _residual_block(nb_filter = 64, kernel_size = 3, repetitions=1)(temp)
 
     temp = _deconv_block(nb_filter = 64, kernel_size = 3)(temp)
-    temp = _residual_block(nb_filter = 64, kernel_size = 3)(temp)
+    temp = _deconv_block(nb_filter = 64, kernel_size = 3)(temp)
 
     temp = _conv_block(nb_filter = 3, kernel_size = 9)(temp)
 
