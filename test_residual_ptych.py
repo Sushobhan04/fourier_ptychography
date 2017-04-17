@@ -13,85 +13,77 @@ def crop(set,N):
 
     return set[:,:,N:h-N,N:w-N]
 
+def BatchGenerator(files,batch_size,dtype = 'train'):
+    while 1:
+        for file in files:
+            curr_data = h5py.File(file,'r')
+            data = np.array(curr_data[dtype]['data'][()])
+            label = np.array(curr_data[dtype]['label'][()])
+            # print data.shape, label.shape
+
+            for i in range((data.shape[0]-1)//batch_size + 1):
+                # print 'batch: '+ str(i)
+                data_bat = data[i*batch_size:(i+1)*batch_size,]
+                label_bat = label[i*batch_size:(i+1)*batch_size,]
+                yield (data_bat, label_bat)
+
 def main():
 
-    # path_test = '/home/sushobhan/caffe/data/ptychography/databases/Test42_Set91_img512_patch48/test_images/'
-    # path_test =  "/home/sushobhan/Documents/data/ptychography/Test42_Set91_img512_patch48/test_images/"
-    # path_test = "/home/sushobhan/Documents/data/ptychography/"
-    path_test = "/home/sushobhan/Documents/data/ptychography/Test40_Set91_img512_patch48/test_images/"
+    path_test = "/home/sushobhan/Documents/data/fourier_ptychography/"
     home = "/home/sushobhan/Documents/research/ptychography/"
     model_name = sys.argv[1]
-    crop_size = 4
 
-    border_mode = 'valid'
+    dataset = []
+    batch_size = 64
 
-    # file_name = 'lena_1.h5'
-    # file_name = 'resChart.h5'
-    file_name = 'set_1.h5'
+    for i in range(1,6):
+        dataset.append(path_test+'datasets/pcp_ptych/set_'+str(i)+'.h5')
 
-    file = h5py.File(path_test+ file_name,'r')
-    ks = file.keys()
-    print ks
+    test_generator = BatchGenerator(dataset, batch_size,dtype = 'test')
+        
+    model = load_model(path_test+'models/'+model_name+'.h5')
+    y_output = model.predict_generator(test_generator, steps=13, max_q_size=100,verbose=1)
+    evalulate = model.evaluate_generator(test_generator, steps=13, max_q_size=100)
 
-    data = file['data']
-    label =file['label']
-    # data = np.max(data) - data
-    # label = np.max(label) - label
+    print evalulate
 
-
-    if file_name=="lena.h5" or file_name=="resChart.h5" or file_name=="lena_1.h5":
-
-        data = np.expand_dims(file['data'], axis=0)
-        label = np.expand_dims(np.expand_dims(file['label'], axis=0),axis=0)
-    # label = np.transpose(label,(0,1,3,2))
+    print y_output.shape
 
     # im.imsave('label.png',label[0,0,],cmap=plt.cm.gray)
     # im.imsave('data.png',data[0,24,],cmap=plt.cm.gray)
-        
-    model = load_model(home+'models/'+model_name+'.h5')
-    y_output = np.array(model.predict(data))
+    # im.imsave('output.png',y_output[0,0,],cmap=plt.cm.gray)
 
-    if border_mode=='valid':
-        data = crop(data,crop_size)
-        label = crop(label,crop_size)
+    # fig = plt.figure(0)
+    # m,n = 2,2
+    # for i in range(0,1):
+    #     # print i
+    #     j,k = i//n, i%n
+    #     # print j,k
+    #     plt.subplot2grid((m,n), (j, k))
+    #     plt.imshow(label[i,0,],cmap=plt.cm.gray)
+    #     # print j+2, k
+    #     plt.subplot2grid((m,n), (j+1, k))
+    #     plt.imshow(y_output[i,0,],cmap=plt.cm.gray)
 
-    print np.max(data), np.max(label)
+    #     plt.subplot2grid((m,n), (j, k+1))
+    #     # plt.imshow(data[i,24,],cmap=plt.cm.gray)
 
-    print y_output.shape, np.max(y_output)
-    print data.shape , label.shape
+    #     print compare_psnr(label[i,0,],y_output[i,0,])
+    #     print compare_psnr(label[i,0,],data[i,24,])
+    # plt.subplot_tool()
+    # plt.savefig(model_name+'.jpg')
 
-    im.imsave('label.png',label[0,0,],cmap=plt.cm.gray)
-    im.imsave('data.png',data[0,24,],cmap=plt.cm.gray)
-    im.imsave('output.png',y_output[0,0,],cmap=plt.cm.gray)
+    # psnr_center = []
+    # psnr_output = []
+    j=0
 
-    fig = plt.figure(0)
-    m,n = 2,2
-    for i in range(0,1):
-        # print i
-        j,k = i//n, i%n
-        # print j,k
-        plt.subplot2grid((m,n), (j, k))
-        plt.imshow(label[i,0,],cmap=plt.cm.gray)
-        # print j+2, k
-        plt.subplot2grid((m,n), (j+1, k))
-        plt.imshow(y_output[i,0,],cmap=plt.cm.gray)
+    for x in test_generator:
+        # psnr_center.append(compare_psnr(label[i,0,],data[i,24,]))
+        for i in range(batch_size):
+            psnr_output.append(compare_psnr(x[i,0,],y_output[j,0,]))
+            j+=1
 
-        plt.subplot2grid((m,n), (j, k+1))
-        plt.imshow(data[i,24,],cmap=plt.cm.gray)
-
-        print compare_psnr(label[i,0,],y_output[i,0,])
-        print compare_psnr(label[i,0,],data[i,24,])
-    plt.subplot_tool()
-    plt.savefig(model_name+'.jpg')
-
-    psnr_center = []
-    psnr_output = []
-
-    for i in range(data.shape[0]):
-        psnr_center.append(compare_psnr(label[i,0,],data[i,24,]))
-        psnr_output.append(compare_psnr(label[i,0,],y_output[i,0,]))
-
-    print np.mean(psnr_output)
+    print psnr_output
     print np.mean(psnr_center)
 
     

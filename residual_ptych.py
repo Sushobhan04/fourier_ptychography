@@ -68,12 +68,12 @@ def TrainingSetGenerator(file):
 
 def schedule(epoch):
     lr = 0.00001
-    if epoch<15:
+    if epoch<100:
         return lr
-    elif epoch<150:
+    elif epoch<200:
         return lr/10
     elif epoch<300:
-        return lr/40
+        return lr/50
     elif epoch<450:
         return lr/160
     else:
@@ -229,15 +229,15 @@ def main():
 
     mParam = {}
     mParam['lrate'] = 0.001
-    mParam['epochs'] = 20
+    mParam['epochs'] = int(sys.argv[2])
     mParam['decay'] = 0.0
     mParam['border_mode'] = 'same'
 
     mParam['input_shape'] = (49,None, None)
     mParam['output_shape'] = (1, None, None)
 
-    mParam['train_batch_size'] = 64
-    mParam['val_batch_size'] = 64
+    mParam['train_batch_size'] = 16
+    mParam['val_batch_size'] = 16
     mParam['steps_per_epoch'] = 12000//mParam['train_batch_size']
     mParam['validation_steps'] = 1500//mParam['val_batch_size']
     # mParam['set_name'] = set_name
