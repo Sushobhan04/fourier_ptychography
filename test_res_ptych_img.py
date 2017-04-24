@@ -78,7 +78,7 @@ def main():
     data = np.clip(data,0.0,1.0)
     label = np.clip(label,0.0,1.0)
 
-    y_output = y_output**2
+    # y_output = y_output**2
     data = data**2
     label = label**2
 

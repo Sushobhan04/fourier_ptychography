@@ -16,14 +16,14 @@ from keras.layers.convolutional import (
     Cropping2D
 )
 from keras.layers.normalization import BatchNormalization
-from keras.layers.merge import concatenate
+from keras.layers.merge import (Add, Multiply)
 from keras import backend as K
 import numpy as np
 import h5py
 from keras.optimizers import SGD, Adadelta, Adam
 from keras.utils import np_utils
 from keras import callbacks
-from keras.callbacks import LearningRateScheduler,EarlyStopping
+from keras.callbacks import LearningRateScheduler,EarlyStopping, ModelCheckpoint
 import math
 import sys
 from keras import losses
@@ -79,6 +79,7 @@ def BatchGenerator(files,batch_size,dtype = 'train', N = 0):
                 # print 'batch: '+ str(i)
                 data_bat = data[i*batch_size:(i+1)*batch_size,]
                 label_bat = label[i*batch_size:(i+1)*batch_size,]
+                label_bat = label_bat**2
                 # yield (normalize(data_bat), crop(label_bat,N))
                 yield (data_bat, crop(label_bat,N))
 
@@ -114,7 +115,7 @@ def _residual_block(filters, kernel_size = 3, repetitions=1, padding = 'same'):
         else:
             res2 = input
 
-        res = merge([res1, res2], mode = 'sum')
+        res = Add()([res1, res2])
 
         return res
 
@@ -208,6 +209,7 @@ def create_conv_model(input_shape, output_shape, padding = 'same'):
     temp = _conv(filters = 1, kernel_size = 5, padding = padding)(temp)
 
     # temp = concatenate([temp1,temp2],axis=CHANNEL_AXIS)
+    temp = Multiply()([temp,temp])
 
 
     model = Model(input= input, output = temp)
@@ -248,7 +250,8 @@ def train_model(path_train,home,model_name,mParam):
     lrate_sch = LearningRateScheduler(schedule)
     early_stop = EarlyStopping(monitor='val_loss', min_delta=0, patience=50, verbose=0, mode='auto')
     # callbacks_list = [early_stop]
-    callbacks_list = [lrate_sch,early_stop]
+    model_chkpt = ModelCheckpoint(path_train+'models/chkpt_'+model_name+'.h5', monitor='val_loss', verbose=0, save_best_only=True, save_weights_only=False, mode='auto', period=1)
+    callbacks_list = [lrate_sch,early_stop, model_chkpt]
 
     sgd = SGD(lr=lrate, momentum=0.9, decay=decay, nesterov=True)
     adam = Adam(lr = lrate)
@@ -256,7 +259,7 @@ def train_model(path_train,home,model_name,mParam):
     # model.compile(loss='mean_squared_error',
     #           optimizer=sgd)
 
-    model.compile(loss='mean_squared_error',
+    model.compile(loss='mean_absolute_error',
               optimizer=adam)
 
     # print validation_steps
@@ -280,7 +283,7 @@ def main():
 
     N = 64
     crop = 8
-    lrate = 0.00001
+    lrate = 0.000001
 
     mParam = {}
     mParam['lrate'] = lrate
