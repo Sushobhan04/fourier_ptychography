@@ -42,8 +42,8 @@ def main():
     test_generator = BatchGenerator(dataset, batch_size,dtype = 'test')
         
     model = load_model(path_test+'models/'+model_name+'.h5')
-    y_output = model.predict_generator(test_generator, steps=13, max_q_size=100,verbose=1)
-    evalulate = model.evaluate_generator(test_generator, steps=13, max_q_size=100)
+    y_output = model.predict_generator(test_generator, steps=2, max_q_size=100,verbose=1)
+    evalulate = model.evaluate_generator(test_generator, steps=2, max_q_size=100)
 
     print evalulate
 
@@ -74,17 +74,28 @@ def main():
     # plt.savefig(model_name+'.jpg')
 
     # psnr_center = []
-    # psnr_output = []
+    psnr_output = []
     j=0
+    y_output = np.clip(y_output,0.0,1.0)
 
     for x in test_generator:
+        print j
         # psnr_center.append(compare_psnr(label[i,0,],data[i,24,]))
+        print type(x[1]), x[1].shape
+        print type(y_output), y_output.shape
+        print np.max(y_output[0,0]), np.min(y_output[0,0])
+        print np.max(x[1][0,0]), np.min(x[1][0,0])
+
+        x_temp= np.clip(x[1],0.0,1.0)
+        
+
         for i in range(batch_size):
-            psnr_output.append(compare_psnr(x[i,0,],y_output[j,0,]))
+            psnr_output.append(compare_psnr(x_temp[i,0,],y_output[j,0,]))
+            print compare_psnr(x_temp[i,0,],y_output[j,0,])
             j+=1
 
     print psnr_output
-    print np.mean(psnr_center)
+    # print np.mean(psnr_center)
 
     
 
