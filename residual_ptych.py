@@ -2,6 +2,10 @@ from keras.models import Model
 from keras.layers import (
     Input,
     Activation,
+<<<<<<< HEAD
+=======
+    merge,
+>>>>>>> 348331ac1e6fbc59cabb208092f1bb3a6ad2b6f7
     Dense,
     Flatten,
     Dropout,
@@ -22,7 +26,11 @@ import h5py
 from keras.optimizers import SGD, Adadelta, Adam
 from keras.utils import np_utils
 from keras import callbacks
+<<<<<<< HEAD
 from keras.callbacks import LearningRateScheduler,EarlyStopping
+=======
+from keras.callbacks import LearningRateScheduler,EarlyStopping, ModelCheckpoint
+>>>>>>> 348331ac1e6fbc59cabb208092f1bb3a6ad2b6f7
 import math
 import sys
 from keras import losses
@@ -91,7 +99,11 @@ def TrainingSetGenerator(file):
 
 def schedule(epoch):
     lr = lrate
+<<<<<<< HEAD
     if epoch<20:
+=======
+    if epoch<200:
+>>>>>>> 348331ac1e6fbc59cabb208092f1bb3a6ad2b6f7
         return lr
     elif epoch<800:
         return lr/10
@@ -114,7 +126,11 @@ def _residual_block(filters, kernel_size = 3, repetitions=1, padding = 'same'):
         else:
             res2 = input
 
+<<<<<<< HEAD
         res = Add([res1, res2])
+=======
+        res = Add()([res1, res2])
+>>>>>>> 348331ac1e6fbc59cabb208092f1bb3a6ad2b6f7
 
         return res
 
@@ -249,7 +265,12 @@ def train_model(path_train,home,model_name,mParam):
     lrate_sch = LearningRateScheduler(schedule)
     early_stop = EarlyStopping(monitor='val_loss', min_delta=0, patience=50, verbose=0, mode='auto')
     # callbacks_list = [early_stop]
+<<<<<<< HEAD
     callbacks_list = [lrate_sch,early_stop]
+=======
+    model_chkpt = ModelCheckpoint(path_train+'models/chkpt_'+model_name+'.h5', monitor='val_loss', verbose=0, save_best_only=True, save_weights_only=False, mode='auto', period=1)
+    callbacks_list = [lrate_sch,early_stop, model_chkpt]
+>>>>>>> 348331ac1e6fbc59cabb208092f1bb3a6ad2b6f7
 
     sgd = SGD(lr=lrate, momentum=0.9, decay=decay, nesterov=True)
     adam = Adam(lr = lrate)
@@ -257,7 +278,11 @@ def train_model(path_train,home,model_name,mParam):
     # model.compile(loss='mean_squared_error',
     #           optimizer=sgd)
 
+<<<<<<< HEAD
     model.compile(loss='mean_squared_error',
+=======
+    model.compile(loss='mean_absolute_error',
+>>>>>>> 348331ac1e6fbc59cabb208092f1bb3a6ad2b6f7
               optimizer=adam)
 
     # print validation_steps
