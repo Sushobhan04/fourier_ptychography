@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import matplotlib.image as im
 import sys
 from skimage.measure import compare_psnr
+import cv2
 
 def crop(set,N):
     h = set.shape[2]
@@ -13,7 +14,18 @@ def crop(set,N):
 
     return set[:,:,N:h-N,N:w-N]
 
-def BatchGenerator(files,batch_size,dtype = 'train'):
+
+def normalize(arr):
+    ma = np.max(arr,axis=(2,3))
+    mi = np.min(arr,axis=(2,3))
+    ma = np.expand_dims(np.expand_dims(ma,axis=2),axis=3)
+    mi = np.expand_dims(np.expand_dims(mi,axis=2),axis=3)
+
+    arr = np.divide((arr - mi),(ma-mi))
+
+    return arr
+
+def BatchGenerator(files,batch_size,dtype = 'train', N=0):
     while 1:
         for file in files:
             curr_data = h5py.File(file,'r')
@@ -25,7 +37,7 @@ def BatchGenerator(files,batch_size,dtype = 'train'):
                 # print 'batch: '+ str(i)
                 data_bat = data[i*batch_size:(i+1)*batch_size,]
                 label_bat = label[i*batch_size:(i+1)*batch_size,]
-                yield (data_bat, label_bat)
+                yield (data_bat, crop(label_bat,N))
 
 def main():
 
@@ -35,67 +47,58 @@ def main():
 
     dataset = []
     batch_size = 64
+    N = 8
 
-    for i in range(1,6):
-        dataset.append(path_test+'datasets/pcp_ptych/set_'+str(i)+'.h5')
+    dataset = h5py.File(path_test+'test40.h5','r')
+    # data = normalize(np.expand_dims(dataset['data'],axis=0))
+    data = np.array(dataset['data'])
+    label = crop(np.array(dataset['label']),N)
+    print label.shape, data.shape
 
-    test_generator = BatchGenerator(dataset, batch_size,dtype = 'test')
+    # test_generator = BatchGenerator(dataset, batch_size,dtype = 'test')
         
     model = load_model(path_test+'models/'+model_name+'.h5')
-    y_output = model.predict_generator(test_generator, steps=2, max_q_size=100,verbose=1)
-    evalulate = model.evaluate_generator(test_generator, steps=2, max_q_size=100)
-
-    print evalulate
+    y_output = model.predict(data)
 
     print y_output.shape
 
-    # im.imsave('label.png',label[0,0,],cmap=plt.cm.gray)
-    # im.imsave('data.png',data[0,24,],cmap=plt.cm.gray)
-    # im.imsave('output.png',y_output[0,0,],cmap=plt.cm.gray)
+    
 
-    # fig = plt.figure(0)
-    # m,n = 2,2
-    # for i in range(0,1):
-    #     # print i
-    #     j,k = i//n, i%n
-    #     # print j,k
-    #     plt.subplot2grid((m,n), (j, k))
-    #     plt.imshow(label[i,0,],cmap=plt.cm.gray)
-    #     # print j+2, k
-    #     plt.subplot2grid((m,n), (j+1, k))
-    #     plt.imshow(y_output[i,0,],cmap=plt.cm.gray)
+    # for i,x in enumerate(data[0]):
+    #     print i
+    #     print (x[0]*255)//1
+    #     print np.max(x*255), np.mean(x*255)
+    #     if i==24:
+    #         print (x*255)//1
+    #     cv2.imwrite('data/'+str(i)+'.png',(x*255)//1)
 
-    #     plt.subplot2grid((m,n), (j, k+1))
-    #     # plt.imshow(data[i,24,],cmap=plt.cm.gray)
+    data = crop(data[:,24:25],N)
 
-    #     print compare_psnr(label[i,0,],y_output[i,0,])
-    #     print compare_psnr(label[i,0,],data[i,24,])
-    # plt.subplot_tool()
-    # plt.savefig(model_name+'.jpg')
-
-    # psnr_center = []
-    psnr_output = []
-    j=0
     y_output = np.clip(y_output,0.0,1.0)
+    data = np.clip(data,0.0,1.0)
+    label = np.clip(label,0.0,1.0)
 
-    for x in test_generator:
-        print j
-        # psnr_center.append(compare_psnr(label[i,0,],data[i,24,]))
-        print type(x[1]), x[1].shape
-        print type(y_output), y_output.shape
-        print np.max(y_output[0,0]), np.min(y_output[0,0])
-        print np.max(x[1][0,0]), np.min(x[1][0,0])
+    y_output = y_output
+    data = data
+    label = label**2
 
-        x_temp= np.clip(x[1],0.0,1.0)
-        
+    print y_output.shape, data.shape, label.shape
 
-        for i in range(batch_size):
-            psnr_output.append(compare_psnr(x_temp[i,0,],y_output[j,0,]))
-            print compare_psnr(x_temp[i,0,],y_output[j,0,])
-            j+=1
+    psnr_input = []
+    psnr_output = []
 
-    print psnr_output
-    # print np.mean(psnr_center)
+    for i in range(label.shape[0]):
+        psnr_output.append(compare_psnr(label[i,0],y_output[i,0]))
+        psnr_input.append(compare_psnr(label[i,0],data[i,0]))
+        cv2.imwrite(str(i)+'_output.png',(y_output[i,0]*255)//1)
+        cv2.imwrite(str(i)+'_data.png',(data[i,0]*255)//1)
+        cv2.imwrite(str(i)+'_original.png',(label[i,0]*255)//1)
+
+    print "psnr_output :"+str(psnr_output)
+    print "psnr_input :"+str(psnr_input)
+
+    print "outpur mean: " + str(np.mean(psnr_output))
+    print "input mean: " + str(np.mean(psnr_input))
 
     
 

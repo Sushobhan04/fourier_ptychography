@@ -96,9 +96,9 @@ def create_dataset(source,destination):
 	print "dataset created"
 
 def main():
-	output_path = '/home/sushobhan/Documents/data/fourier_ptychography/datasets/pcp_ptych/'
+	output_path = '/home/sushobhan/Documents/data/fourier_ptychography/datasets/Test40/'
 	# source = '/home/sushobhan/Documents/data/ptychography/data/Set91/'
-	source = '/home/sushobhan/Documents/data/fourier_ptychography/datasets/Test42_Set91_img512_patch48/train_images/'
+	source = '/home/sushobhan/Documents/data/fourier_ptychography/datasets/Test40_Set91_img512_patch48/train_images/'
 
 
 	create_dataset(source,output_path)
