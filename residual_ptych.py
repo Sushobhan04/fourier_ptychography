@@ -22,7 +22,7 @@ import h5py
 from keras.optimizers import SGD, Adadelta, Adam
 from keras.utils import np_utils
 from keras import callbacks
-from keras.callbacks import LearningRateScheduler,EarlyStopping
+from keras.callbacks import LearningRateScheduler,EarlyStopping, ModelCheckpoint
 import math
 import sys
 from keras import losses
@@ -66,12 +66,12 @@ def normalize(arr):
 
 
 
-def BatchGenerator(files,batch_size,dtype = 'train', N = 0):
+def BatchGenerator(files,batch_size, N = 0):
     while 1:
         for file in files:
             curr_data = h5py.File(file,'r')
-            data = np.array(curr_data[dtype]['data'][()])
-            label = np.array(curr_data[dtype]['label'][()])
+            data = np.array(curr_data['data'][()])
+            label = np.array(curr_data['label'][()])
             # print data.shape, label.shape
 
             for i in range((data.shape[0]-1)//batch_size + 1):
@@ -91,11 +91,11 @@ def TrainingSetGenerator(file):
 
 def schedule(epoch):
     lr = lrate
-    if epoch<100:
+    if epoch<50:
         return lr
-    elif epoch<800:
+    elif epoch<200:
         return lr/10
-    elif epoch<1000:
+    elif epoch<400:
         return lr/50
     elif epoch<450:
         return lr/160
@@ -114,7 +114,7 @@ def _residual_block(filters, kernel_size = 3, repetitions=1, padding = 'same'):
         else:
             res2 = input
 
-        res = Add([res1, res2])
+        res = Add()([res1, res2])
 
         return res
 
@@ -185,15 +185,16 @@ def _conv(filters, kernel_size = 3, subsample=(1, 1), padding = 'same'):
 def create_residual_model(input_shape, output_shape, padding = 'same'):
     input = Input(shape=input_shape)
 
-    temp = _conv_relu(filters = 64, kernel_size = 5, padding = padding)(input)
+    temp = _conv_relu(filters = 64, kernel_size = 9, padding = padding)(input)
 
     temp = _residual_block(filters = 64, kernel_size = 3, repetitions=1, padding = padding)(temp)
-    temp = _residual_block(filters = 64, kernel_size = 3, repetitions=1, padding = padding)(temp)
-    temp = _residual_block(filters = 64, kernel_size = 3, repetitions=1, padding = padding)(temp)
-    temp = _residual_block(filters = 64, kernel_size = 3, repetitions=1, padding = padding)(temp)
+    # temp = _residual_block(filters = 64, kernel_size = 3, repetitions=1, padding = padding)(temp)
+    # temp = _residual_block(filters = 64, kernel_size = 3, repetitions=1, padding = padding)(temp)
+    # temp = _residual_block(filters = 64, kernel_size = 3, repetitions=1, padding = padding)(temp)
     temp = _conv(filters = 1, kernel_size = 5, padding = padding)(temp)
 
     # temp = concatenate([temp1,temp2],axis=CHANNEL_AXIS)
+    temp = Multiply()([temp,temp])
 
 
     model = Model(input= input, output = temp)
@@ -239,17 +240,22 @@ def train_model(path_train,home,model_name,mParam):
 
     # train_files = [path_train+'data/'+'dataset_1.h5']
     # val_files = [path_train+'data/'+'valset_1.h5']
-    dataset = []
+    train_dataset = []
+    val_dataset = []
 
     for i in range(1,6):
-        dataset.append(path_train+'datasets/Test40/'+'set_'+str(i)+'.h5')
+        train_dataset.append(path_train+'datasets/Test42/train/'+'set_'+str(i)+'.h5')
 
-    train_generator = BatchGenerator(dataset,train_batch_size,dtype = 'train', N = crop)
-    val_generator = BatchGenerator(dataset,val_batch_size,dtype = 'val', N = crop)
+    for i in range(1,2):
+        val_dataset.append(path_train+'datasets/Test42/test/'+'set_'+str(i)+'.h5')
+
+    train_generator = BatchGenerator(train_dataset,train_batch_size, N = crop)
+    val_generator = BatchGenerator(val_dataset,val_batch_size, N = crop)
     lrate_sch = LearningRateScheduler(schedule)
     early_stop = EarlyStopping(monitor='val_loss', min_delta=0, patience=50, verbose=0, mode='auto')
+    chkpt = ModelCheckpoint(path_train+'models/chkpt_'+model_name+'.h5', monitor='val_loss', verbose=0, save_best_only=True, save_weights_only=False, mode='auto', period=1)
     # callbacks_list = [early_stop]
-    callbacks_list = [lrate_sch,early_stop]
+    callbacks_list = [lrate_sch,early_stop, chkpt]
 
     sgd = SGD(lr=lrate, momentum=0.9, decay=decay, nesterov=True)
     adam = Adam(lr = lrate)
@@ -281,7 +287,7 @@ def main():
 
     N = 64
     crop = 8
-    lrate = 0.000001
+    lrate = 0.0001
 
     mParam = {}
     mParam['lrate'] = lrate

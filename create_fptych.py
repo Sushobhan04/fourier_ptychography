@@ -89,19 +89,24 @@ def create_dataset(source,destination):
 
 		f = h5py.File(destination+filename,'w')
 		dataset, labelset = shuffle_pairs(dataset, labelset)
-		f = tvt_split(dataset, labelset, f)
+		# f = tvt_split(dataset, labelset, f)
+		f['data'] = dataset
+		f['label'] = labelset
 		f.close()
 
 
 	print "dataset created"
 
 def main():
-	output_path = '/home/sushobhan/Documents/data/fourier_ptychography/datasets/Test40/'
+	output_path = '/home/sushobhan/Documents/data/fourier_ptychography/datasets/Test42/'
 	# source = '/home/sushobhan/Documents/data/ptychography/data/Set91/'
-	source = '/home/sushobhan/Documents/data/fourier_ptychography/datasets/Test40_Set91_img512_patch48/train_images/'
+	source = '/home/sushobhan/Documents/data/fourier_ptychography/datasets/Test42_Set91_img512_patch48/'
+	# test_source = '/home/sushobhan/Documents/data/fourier_ptychography/datasets/Test42_Set91_img512_patch48/test_images/'
 
 
-	create_dataset(source,output_path)
+
+	create_dataset(source+'train_images/',output_path+'train/')
+	create_dataset(source+'test_images/',output_path+'test/')
 
 
 
