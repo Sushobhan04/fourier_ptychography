@@ -91,7 +91,7 @@ def TrainingSetGenerator(file):
 
 def schedule(epoch):
     lr = lrate
-    if epoch<100:
+    if epoch<80:
         return lr
     elif epoch<800:
         return lr/10
@@ -193,6 +193,8 @@ def create_residual_model(input_shape, output_shape, padding = 'same'):
     temp = _residual_block(filters = 64, kernel_size = 3, repetitions=1, padding = padding)(temp)
     temp = _conv(filters = 1, kernel_size = 5, padding = padding)(temp)
 
+    temp = Multiply()([temp,temp])
+
     # temp = concatenate([temp1,temp2],axis=CHANNEL_AXIS)
 
 
@@ -281,7 +283,7 @@ def main():
 
     N = 64
     crop = 8
-    lrate = 0.000001
+    lrate = 0.00001
 
     mParam = {}
     mParam['lrate'] = lrate
