@@ -7,6 +7,7 @@ import matplotlib.image as im
 import sys
 from skimage.measure import compare_psnr
 import cv2
+import random
 
 def crop(set,N):
     h = set.shape[2]

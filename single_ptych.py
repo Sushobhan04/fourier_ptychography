@@ -204,8 +204,8 @@ def create_residual_model(input_shape, output_shape, padding = 'same'):
 def create_conv_model(input_shape, output_shape, padding = 'same'):
     input = Input(shape=input_shape)
 
-    temp = _conv_relu(filters = 64, kernel_size = 9, padding = padding)(input)
-    temp = _conv_relu(filters = 32, kernel_size = 5, padding = padding)(temp)
+    temp = _conv_relu(filters = 32, kernel_size = 9, padding = padding)(input)
+    temp = _conv_relu(filters = 16, kernel_size = 5, padding = padding)(temp)
     temp = _conv(filters = 1, kernel_size = 5, padding = padding)(temp)
 
     # temp = concatenate([temp1,temp2],axis=CHANNEL_AXIS)
